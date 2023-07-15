@@ -13,16 +13,20 @@ root.config(bg="white")
 pen_color = "black"
 pen_size = 5
 file_path = ""
+original_image = None
+manipulated_image = None
 
 
 def add_image():
-    global file_path
+    global file_path, original_image, manipulated_image
     file_path = filedialog.askopenfilename(
         initialdir="D:/codefirst.io/Tkinter Image Editor/Pictures")
     image = Image.open(file_path)
     width, height = int(image.width / 2), int(image.height / 2)
-    image = image.resize((width, height), Image.ANTIALIAS)
+    image = image.resize((width, height), Image.LANCZOS)
     canvas.config(width=image.width, height=image.height)
+    original_image = image.copy()
+    manipulated_image = original_image.copy()
     image = ImageTk.PhotoImage(image)
     canvas.image = image
     canvas.create_image(0, 0, image=image, anchor="nw")
@@ -50,22 +54,38 @@ def clear_canvas():
 
 
 def apply_filter(filter):
-    image = Image.open(file_path)
-    width, height = int(image.width / 2), int(image.height / 2)
-    image = image.resize((width, height), Image.ANTIALIAS)
-    if filter == "Black and White":
-        image = ImageOps.grayscale(image)
-    elif filter == "Blur":
-        image = image.filter(ImageFilter.BLUR)
-    elif filter == "Sharpen":
-        image = image.filter(ImageFilter.SHARPEN)
-    elif filter == "Smooth":
-        image = image.filter(ImageFilter.SMOOTH)
-    elif filter == "Emboss":
-        image = image.filter(ImageFilter.EMBOSS)
-    image = ImageTk.PhotoImage(image)
+    global manipulated_image
+    if filter == "Original":
+        manipulated_image = original_image.copy()
+    else:
+        image = original_image.copy()
+        if filter == "Black and White":
+            image = ImageOps.grayscale(image)
+        elif filter == "Blur":
+            image = image.filter(ImageFilter.BLUR)
+        elif filter == "Sharpen":
+            image = image.filter(ImageFilter.SHARPEN)
+        elif filter == "Smooth":
+            image = image.filter(ImageFilter.SMOOTH)
+        elif filter == "Emboss":
+            image = image.filter(ImageFilter.EMBOSS)
+        manipulated_image = image.copy()
+    image = ImageTk.PhotoImage(manipulated_image)
     canvas.image = image
     canvas.create_image(0, 0, image=image, anchor="nw")
+
+
+def download_image():
+    if manipulated_image:
+        save_path = filedialog.asksaveasfilename(
+            initialdir="D:/codefirst.io/Tkinter Image Editor/Pictures",
+            defaultextension=".png",
+            filetypes=(("PNG Image", "*.png"), ("All Files", "*.*"))
+        )
+        if save_path:
+            original_width, original_height = original_image.size
+            resized_image = manipulated_image.resize((original_width*2, original_height*2), Image.LANCZOS)
+            resized_image.save(save_path)
 
 
 left_frame = tk.Frame(root, width=200, height=600, bg="white")
@@ -104,7 +124,7 @@ clear_button.pack(pady=10)
 
 filter_label = tk.Label(left_frame, text="Select Filter", bg="white")
 filter_label.pack()
-filter_combobox = ttk.Combobox(left_frame, values=["Black and White", "Blur",
+filter_combobox = ttk.Combobox(left_frame, values=["Original", "Black and White", "Blur",
                                              "Emboss", "Sharpen", "Smooth"])
 filter_combobox.pack()
 
@@ -112,6 +132,8 @@ filter_combobox.pack()
 filter_combobox.bind("<<ComboboxSelected>>",
                      lambda event: apply_filter(filter_combobox.get()))
 
+download_button = tk.Button(left_frame, text="Download Image", command=download_image, bg="white")
+download_button.pack(pady=10)
 
 canvas.bind("<B1-Motion>", draw)
 
